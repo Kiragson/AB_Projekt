@@ -1,0 +1,11 @@
+create or replace FUNCTION IsValidPassword(p_password VARCHAR2) RETURN BOOLEAN IS
+BEGIN
+    IF LENGTH(p_password) < 8 THEN
+        RETURN FALSE;
+    ELSIF NOT REGEXP_LIKE(p_password, '[A-Za-z]') OR NOT REGEXP_LIKE(p_password, '[0-9]') THEN
+        RETURN FALSE;
+    ELSE
+        RETURN TRUE;
+    END IF;
+END;
+/

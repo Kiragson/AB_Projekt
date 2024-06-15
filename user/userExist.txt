@@ -1,0 +1,14 @@
+create or replace FUNCTION UserExists(p_username IN VARCHAR2) RETURN BOOLEAN IS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+    INTO v_count
+    FROM Users
+    WHERE LOWER(Username) = LOWER(p_username);
+
+    RETURN (v_count > 0);
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE_APPLICATION_ERROR(-20000, 'Błąd podczas sprawdzania istnienia użytkownika: ' || SQLERRM);
+END;
+/

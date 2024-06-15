@@ -1,0 +1,45 @@
+CREATE OR REPLACE PROCEDURE LoginUser (
+    p_username IN VARCHAR2,
+    p_password IN VARCHAR2,
+    p_userrole OUT NUMBER
+) AS
+    v_password VARCHAR2(255);
+    v_result NUMBER;
+BEGIN
+    -- Walidacja danych wejściowych
+    IF p_username IS NULL OR TRIM(p_username) IS NULL THEN
+        v_result := log_user_registration_action(p_username, 'FAIL', 'Nazwa użytkownika nie może być pusta.');
+        RAISE_APPLICATION_ERROR(-20009, 'Nazwa użytkownika nie może być pusta.');
+    ELSIF p_password IS NULL OR TRIM(p_password) IS NULL THEN
+        v_result := log_user_registration_action(p_username, 'FAIL', 'Hasło nie może być puste.');
+        RAISE_APPLICATION_ERROR(-20010, 'Hasło nie może być puste.');
+    END IF;
+
+    -- Sprawdzenie, czy użytkownik istnieje i czy hasło jest poprawne
+    BEGIN
+        SELECT Password, UserRole INTO v_password, p_userrole
+        FROM Users
+        WHERE Username = p_username;
+        
+        IF v_password != p_password THEN
+            v_result := log_user_registration_action(p_username, 'FAIL', 'Nieprawidłowe hasło.');
+            RAISE_APPLICATION_ERROR(-20003, 'Nieprawidłowe hasło.');
+        END IF;
+
+        -- Logowanie udanego logowania
+        v_result := log_user_registration_action(p_username, 'SUCCESS', 'Użytkownik zalogowany pomyślnie.');
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            v_result := log_user_registration_action(p_username, 'FAIL', 'Nie znaleziono użytkownika.');
+            RAISE_APPLICATION_ERROR(-20004, 'Nie znaleziono użytkownika.');
+        WHEN OTHERS THEN
+            v_result := log_user_registration_action(p_username, 'ERROR', 'Błąd logowania: ' || SQLERRM);
+            RAISE_APPLICATION_ERROR(-20005, 'Błąd logowania: ' || SQLERRM);
+    END;
+
+EXCEPTION
+    WHEN OTHERS THEN
+        v_result := log_user_registration_action(p_username, 'ERROR', 'Błąd logowania: ' || SQLERRM);
+        RAISE_APPLICATION_ERROR(-20005, 'Błąd logowania: ' || SQLERRM);
+END;
+/

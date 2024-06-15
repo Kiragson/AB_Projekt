@@ -1,0 +1,17 @@
+create or replace FUNCTION log_user_registration_action (
+    p_username IN VARCHAR2,
+    p_action IN VARCHAR2,
+    p_description IN VARCHAR2
+) RETURN NUMBER AS
+BEGIN
+    INSERT INTO UserRegisterLog (Username, Action, Description)
+    VALUES (p_username, p_action, p_description);
+
+    -- Zwrócenie wartości 1, oznaczające sukces operacji
+    RETURN 1;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- W przypadku wystąpienia błędu, zwracamy -1
+        RETURN -1;
+END;
+/

@@ -1,0 +1,37 @@
+create or replace PROCEDURE CreateAdmin (
+    p_username IN VARCHAR2,
+    p_password IN VARCHAR2
+) AS
+    v_result NUMBER;
+BEGIN
+    -- Walidacja danych wejściowych
+    IF p_username IS NULL OR TRIM(p_username) IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20009, 'Nazwa użytkownika nie może być pusta.');
+    END IF;
+
+    IF NOT ISVALIDPASSWORD(p_password) THEN
+        RAISE_APPLICATION_ERROR(-20010, 'Hasło nie spełnia wymagań.');
+    END IF;
+
+    -- Sprawdzenie, czy nazwa użytkownika już istnieje
+    IF USEREXISTS(p_username) THEN
+        -- Logowanie próby dodania istniejącego użytkownika
+        v_result := log_user_registration_action(p_username, 'FAIL', 'Nazwa użytkownika już istnieje.');
+        RAISE_APPLICATION_ERROR(-20001, 'Nazwa użytkownika już istnieje.');
+    END IF;
+
+    -- Wstawianie nowego administratora do bazy danych
+    INSERT INTO Users (Username, Password, UserRole)
+    VALUES (p_username, p_password, 2);
+
+    -- Logowanie udanego dodania administratora
+    v_result := log_user_registration_action(p_username, 'SUCCESS', 'Administrator dodany pomyślnie.');
+
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- Logowanie nieoczekiwanego błędu
+        v_result := log_user_registration_action(p_username, 'ERROR', SQLERRM);
+        RAISE_APPLICATION_ERROR(-20002, 'Błąd podczas tworzenia admina: ' || SQLERRM);
+END;
+/

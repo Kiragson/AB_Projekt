@@ -1,0 +1,44 @@
+create or replace PROCEDURE EditAdmin (
+    p_user_id IN NUMBER,
+    p_new_username IN VARCHAR2,
+    p_new_password IN VARCHAR2
+) AS
+    v_current_username VARCHAR2(50);
+    v_result NUMBER;
+BEGIN
+    -- Pobranie obecnej nazwy użytkownika
+    SELECT Username INTO v_current_username FROM Users WHERE UserID = p_user_id;
+
+    -- Sprawdzenie, czy nowa nazwa użytkownika jest już używana
+    IF LOWER(v_current_username) != LOWER(p_new_username) THEN
+        IF USEREXISTS(p_new_username) THEN
+            v_result := log_user_registration_action(p_new_username, 'FAIL', 'Nazwa użytkownika już istnieje.');
+            RAISE_APPLICATION_ERROR(-20001, 'Nazwa użytkownika już istnieje.');
+        END IF;
+    END IF;
+
+    -- Walidacja nowego hasła
+    IF NOT isValidPassword(p_new_password) THEN
+        v_result := log_user_registration_action(p_new_username, 'FAIL', 'Hasło nie spełnia wymagań.');
+        RAISE_APPLICATION_ERROR(-20010, 'Nowe hasło nie spełnia wymagań.');
+    END IF;
+
+    -- Aktualizacja danych administratora
+    UPDATE Users
+    SET Username = p_new_username, Password = p_new_password
+    WHERE UserID = p_user_id;
+
+    -- Logowanie udanej edycji danych administratora
+    v_result := log_user_registration_action(p_new_username, 'SUCCESS', 'Dane administratora zaktualizowane.');
+    COMMIT;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        v_result := log_user_registration_action(p_new_username, 'ERROR', 'Nie znaleziono administratora o podanym ID.');
+        RAISE_APPLICATION_ERROR(-20012, 'Nie znaleziono administratora o podanym ID.');
+    WHEN OTHERS THEN
+        -- Logowanie nieoczekiwanego błędu
+        v_result := log_user_registration_action(p_new_username, 'ERROR', SQLERRM);
+        RAISE_APPLICATION_ERROR(-20002, 'Błąd podczas edycji danych admina: ' || SQLERRM);
+END;
+/
