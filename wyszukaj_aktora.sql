@@ -1,17 +1,20 @@
 CREATE OR REPLACE PROCEDURE wyszukaj_aktorow (
     p_partial_name IN VARCHAR2,
-    p_results OUT SYS_REFCURSOR
+    p_result OUT VARCHAR2
 ) IS
+    v_aktorid NUMBER;
+    v_imienazwisko VARCHAR2(255);
 BEGIN
-    -- Otwarcie kursora z wynikami wyszukiwania
-    OPEN p_results FOR
-        SELECT AktorID, ImieNazwisko, DataUrodzenia, Plec
-        FROM Aktorzy
-        WHERE LOWER(ImieNazwisko) LIKE LOWER('%' || p_partial_name || '%');
+    -- Przykładowe zapytanie, które zwraca jednego aktora
+    SELECT AktorID, ImieNazwisko INTO v_aktorid, v_imienazwisko
+    FROM Aktorzy
+    WHERE LOWER(ImieNazwisko) LIKE LOWER('%' || p_partial_name || '%') AND ROWNUM = 1;
+
+    p_result := 'AktorID: ' || TO_CHAR(v_aktorid) || ', Imię i nazwisko: ' || v_imienazwisko;
 EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        p_result := 'Nie znaleziono aktora.';
     WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Wystąpił błąd: ' || SQLERRM);
-        OPEN p_results FOR SELECT NULL AS AktorID, NULL AS ImieNazwisko, NULL AS DataUrodzenia, NULL AS Plec FROM dual WHERE 1 = 0;
-        RAISE;
+        p_result := 'Wystąpił błąd: ' || SQLERRM;
 END;
 /
