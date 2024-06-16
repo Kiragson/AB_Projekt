@@ -1,25 +1,26 @@
-create or replace PROCEDURE report_actors_by_birthdate (
-    p_birthdate IN DATE,
-    p_before IN BOOLEAN,
-    p_results OUT SYS_REFCURSOR
+CREATE OR REPLACE PROCEDURE report_actors_sorted_by_birthdate (
+    p_result OUT VARCHAR2
 ) IS
+    v_result_temp VARCHAR2(32767); -- Tymczasowy ciąg na wyniki
 BEGIN
-    IF p_before THEN
-        OPEN p_results FOR
-            SELECT AktorID, ImieNazwisko, DataUrodzenia, Plec
-            FROM Aktorzy
-            WHERE DataUrodzenia < p_birthdate
-            ORDER BY DataUrodzenia;
+    -- Pobieranie wszystkich aktorów i sortowanie ich według daty urodzenia od najstarszego do najmłodszego
+    FOR rec IN (
+        SELECT AktorID, ImieNazwisko, DataUrodzenia, Plec
+        FROM Aktorzy
+        ORDER BY DataUrodzenia
+    ) LOOP
+        v_result_temp := v_result_temp || 'AktorID: ' || rec.AktorID || ', ImieNazwisko: ' || rec.ImieNazwisko ||
+                         ', Data Urodzenia: ' || TO_CHAR(rec.DataUrodzenia, 'DD-MM-YYYY') || ', Płeć: ' || rec.Plec || '; ';
+    END LOOP;
+
+    IF v_result_temp IS NULL THEN
+        p_result := 'Nie znaleziono aktorów.';
     ELSE
-        OPEN p_results FOR
-            SELECT AktorID, ImieNazwisko, DataUrodzenia, Plec
-            FROM Aktorzy
-            WHERE DataUrodzenia >= p_birthdate
-            ORDER BY DataUrodzenia;
+        p_result := v_result_temp;
     END IF;
+
 EXCEPTION
     WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Wystąpił błąd: ' || SQLERRM);
-        OPEN p_results FOR SELECT NULL AS AktorID, NULL AS ImieNazwisko, NULL AS DataUrodzenia, NULL AS Plec FROM dual WHERE 1 = 0;
-END report_actors_by_birthdate;
+        p_result := 'Wystąpił błąd: ' || SQLERRM;
+END report_actors_sorted_by_birthdate;
 /

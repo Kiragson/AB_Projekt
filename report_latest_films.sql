@@ -1,16 +1,27 @@
-CREATE OR REPLACE PROCEDURE report_latest_films (
-    p_limit IN NUMBER,
-    p_results OUT SYS_REFCURSOR
+create or replace PROCEDURE report_latest_films (
+    p_result OUT VARCHAR2
 ) IS
 BEGIN
-    OPEN p_results FOR
+    p_result := '';
+
+    FOR rec IN (
         SELECT FilmID, Tytul, DataPremiery, Gatunek, Budzet, Przychody
         FROM Filmy
         ORDER BY DataPremiery DESC
-        FETCH FIRST p_limit ROWS ONLY;
+        FETCH FIRST 5 ROWS ONLY
+    ) LOOP
+        p_result := p_result || 'FilmID: ' || rec.FilmID || ', Tytul: ' || rec.Tytul || 
+                     ', Data Premiery: ' || TO_CHAR(rec.DataPremiery, 'DD-MM-YYYY') || 
+                     ', Gatunek: ' || rec.Gatunek || ', Budzet: ' || rec.Budzet || 
+                     ', Przychody: ' || rec.Przychody || CHR(10);
+    END LOOP;
+
+    IF p_result IS NULL THEN
+        p_result := 'Brak filmów.';
+    END IF;
+
 EXCEPTION
     WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Wystąpił błąd: ' || SQLERRM);
-        OPEN p_results FOR SELECT NULL AS FilmID, NULL AS Tytul, NULL AS DataPremiery, NULL AS Gatunek, NULL AS Budzet, NULL AS Przychody FROM dual WHERE 1 = 0;
+        p_result := 'Wystąpił błąd: ' || SQLERRM;
 END report_latest_films;
 /
