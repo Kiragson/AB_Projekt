@@ -1,26 +1,44 @@
 CREATE OR REPLACE PROCEDURE wyszukaj_role_aktora (
     p_imie_nazwisko IN VARCHAR2,
-    p_results OUT SYS_REFCURSOR
+    p_result OUT VARCHAR2
 ) IS
+    c_aktor SYS_REFCURSOR;
     v_aktor_id NUMBER;
+    v_result_temp VARCHAR2(32767); -- Tymczasowy ciąg na wyniki
 BEGIN
-    -- Uzyskanie ID aktora na podstawie jego imienia i nazwiska
-    SELECT AktorID INTO v_aktor_id FROM Aktorzy WHERE LOWER(ImieNazwisko) = LOWER(p_imie_nazwisko);
+    -- Uzyskanie kursora z ID aktorów na podstawie imienia i nazwiska
+    c_aktor := id_aktor(p_imie_nazwisko);
 
-    -- Otwarcie kursora z informacjami o rolach aktora
-    OPEN p_results FOR
-        SELECT f.FilmID, f.Tytul, fa.Rola
-        FROM Filmy f
-        JOIN FilmyAktorzy fa ON f.FilmID = fa.FilmID
-        WHERE fa.AktorID = v_aktor_id;
+    LOOP
+        FETCH c_aktor INTO v_aktor_id;
+        EXIT WHEN c_aktor%NOTFOUND;
+
+        -- Pobieranie informacji o rolach aktora i dodawanie do wyniku
+        FOR rec IN (
+            SELECT f.FilmID, f.Tytul, fa.Rola
+            FROM Filmy f
+            JOIN FilmyAktorzy fa ON f.FilmID = fa.FilmID
+            WHERE fa.AktorID = v_aktor_id
+        ) LOOP
+            v_result_temp := v_result_temp || 'FilmID: ' || rec.FilmID || ', Tytul: ' || rec.Tytul || ', Rola: ' || rec.Rola || '; ';
+        END LOOP;
+    END LOOP;
+
+    CLOSE c_aktor;
+
+    IF v_result_temp IS NULL THEN
+        p_result := 'Nie znaleziono ról dla aktora o imieniu i nazwisku: ' || p_imie_nazwisko;
+    ELSE
+        p_result := v_result_temp;
+    END IF;
 
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-        DBMS_OUTPUT.PUT_LINE('Nie znaleziono aktora o imieniu i nazwisku: ' || p_imie_nazwisko);
-        OPEN p_results FOR SELECT NULL AS FilmID, NULL AS Tytul, NULL AS Rola FROM dual WHERE 1 = 0;
+        p_result := 'Nie znaleziono aktora o imieniu i nazwisku: ' || p_imie_nazwisko;
     WHEN OTHERS THEN
-        DBMS_OUTPUT.PUT_LINE('Wystąpił błąd: ' || SQLERRM);
-        OPEN p_results FOR SELECT NULL AS FilmID, NULL AS Tytul, NULL AS Rola FROM dual WHERE 1 = 0;
-        RAISE;
+        IF c_aktor%ISOPEN THEN
+            CLOSE c_aktor;
+        END IF;
+        p_result := 'Wystąpił błąd: ' || SQLERRM;
 END;
 /
